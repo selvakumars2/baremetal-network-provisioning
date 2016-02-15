@@ -16,3 +16,4 @@ BNP_EXTENSION_DRIVER=baremetal_network_provisioning.ml2.hpironicextensiondriver:
 # enable_service bnp-plugin
 #
 # This can be overridden in the localrc file 
+Q_PROTOCOL_DRIVER=${Q_PROTOCOL_DRIVER:-"snmp"}

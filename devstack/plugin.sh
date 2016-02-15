@@ -29,7 +29,7 @@ function configure_bnp_plugin {
     iniset $BNP_ML2_CONF_HP_FILE default snmp_timeout $SNMP_TIMEOUT
     iniset $BNP_ML2_CONF_HP_FILE default snmp_retries $SNMP_RETRIES
     iniadd $BNP_ML2_CONF_HP_FILE ml2_hp net_provisioning_driver $NET_PROVISIONING_DRIVER
-    iniadd $BNP_ML2_CONF_HP_FILE ml2_hp protocol_drivers $Q_PROTOCOL_DRIVER
+    iniset $BNP_ML2_CONF_HP_FILE ml2_hp protocol_drivers $Q_PROTOCOL_DRIVER
     iniset $BNP_ENTRY_POINT_FILE neutron.ml2.mechanism_drivers hp $HP_MECHANISM_DRIVER
     iniset $BNP_ENTRY_POINT_FILE neutron.ml2.extension_drivers bnp_ext_driver $BNP_EXTENSION_DRIVER
 }
