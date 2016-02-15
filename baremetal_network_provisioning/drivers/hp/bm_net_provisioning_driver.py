@@ -190,11 +190,11 @@ class BMNetProvisioningDriver(api.NetworkProvisioningApi):
         """Get the protocol driver instance based on protocol."""
         protocol_type = bnp_switch.access_protocol
         snmp_protocol = constants.PROTOCOL_SNMP
-        if constants.PROTOCOL_SNMP in protocol_type:
-            driver = self.protocol_manager.protocol_driver(snmp_protocol)
-        else:
-            try:
+        try:
+            if constants.PROTOCOL_SNMP in protocol_type:
+                driver = self.protocol_manager.protocol_driver(snmp_protocol)
+            else:
                 driver = self.protocol_manager.protocol_driver(protocol_type)
-            except Exception as e:
-                LOG.error(_LE("No suitable protocol driver loaded'%s' "), e)
+        except Exception as e:
+            LOG.error(_LE("No suitable protocol driver loaded'%s' "), e)
         return driver
