@@ -21,9 +21,20 @@ from baremetal_network_provisioning.drivers import (port_provisioning_driver
 
 from neutron.i18n import _LE
 
+from oslo_config import cfg
 from oslo_log import log as logging
 
 LOG = logging.getLogger(__name__)
+
+hp_opts = [
+    cfg.IntOpt('snmp_retries',
+               default=5,
+               help=_("Number of retries to be done")),
+    cfg.IntOpt('snmp_timeout',
+               default=3,
+               help=_("Timeout in seconds to wait for SNMP request"
+                      "completion."))]
+cfg.CONF.register_opts(hp_opts, "default")
 
 
 class SNMPDriver(driver.PortProvisioningDriver):
@@ -35,6 +46,7 @@ class SNMPDriver(driver.PortProvisioningDriver):
     def set_isolation(self, port):
         """set_isolation ."""
         try:
+            LOG.debug("set_isolation called from driver")
             client = snmp_client.get_client(self._get_switch_dict(port))
             seg_id = port['port']['segmentation_id']
             vlan_oid = constants.OID_VLAN_CREATE + '.' + str(seg_id)
@@ -138,3 +150,59 @@ class SNMPDriver(driver.PortProvisioningDriver):
             LOG.error(_LE("Error in get response '%s' "), e)
             return None
         return snmp_response
+
+    def get_type(self):
+        return constants.PROTOCOL_SNMP
+
+    def discover_switch(self, switch_info):
+        client = snmp_client.get_client(switch_info)
+        mac_addr = self.get_mac_addr(client)
+        ports_dict = self.get_ports_info(client)
+        switch = {'mac_address': mac_addr, 'ports': ports_dict}
+        return switch
+
+    def get_sys_name(self, switch_info):
+        oid = constants.OID_SYS_NAME
+        client = snmp_client.get_client(switch_info)
+        client.get(oid)
+
+    def get_mac_addr(self, client):
+        oid = constants.OID_MAC_ADDRESS
+        var_binds = client.get(oid)
+        for name, val in var_binds:
+            mac = val.prettyPrint().zfill(12)
+            mac = mac[2:]
+            mac_addr = ':'.join([mac[i:i + 2] for i in range(0, 12, 2)])
+            return mac_addr
+
+    def get_ports_info(self, client):
+
+        oids = [constants.OID_PORTS,
+                constants.OID_IF_INDEX,
+                constants.OID_IF_TYPE,
+                constants.OID_PORT_STATUS]
+        var_binds = client.get_bulk(*oids)
+        ports_dict = []
+        for var_bind_table_row in var_binds:
+            if_index = (var_bind_table_row[0][1]).prettyPrint()
+            port_name = (var_bind_table_row[1][1]).prettyPrint()
+            if_type = (var_bind_table_row[2][1]).prettyPrint()
+            if if_type == constants.PHY_PORT_TYPE:
+                ports_dict.append(
+                    {'ifindex': if_index,
+                     'interface_name': port_name,
+                     'port_status': var_bind_table_row[3][1].prettyPrint()})
+        return ports_dict
+
+    def get_ports_status(self):
+
+        oids = [constants.OID_PORTS,
+                constants.OID_PORT_STATUS]
+        var_binds = self.client.get_bulk(*oids)
+        ports_dict = []
+        for var_bind_table_row in var_binds:
+            if_index = (var_bind_table_row[0][1]).prettyPrint()
+            ports_dict.append(
+                {'ifindex': if_index,
+                 'port_status': var_bind_table_row[1][1].prettyPrint()})
+        return ports_dict

@@ -1,4 +1,4 @@
-# Copyright 2015 OpenStack Foundation
+# Copyright 2016 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -16,7 +16,7 @@ from baremetal_network_provisioning.common import constants as hp_const
 from baremetal_network_provisioning.db import bm_nw_provision_db as db
 from baremetal_network_provisioning.db import bm_nw_provision_models as models
 from baremetal_network_provisioning.drivers.hp import (
-    hp_snmp_provisioning_driver as driver)
+    bm_net_provisioning_driver as driver)
 
 import contextlib
 
@@ -26,11 +26,11 @@ from neutron.plugins.ml2.common import exceptions as ml2_exc
 from neutron.tests import base
 
 
-class TestHPSNMPProvisioningDriver(base.BaseTestCase):
+class TestBMNetProvisioningDriver(base.BaseTestCase):
 
     def setUp(self):
-        super(TestHPSNMPProvisioningDriver, self).setUp()
-        self.driver = driver.HPSNMPProvisioningDriver()
+        super(TestBMNetProvisioningDriver, self).setUp()
+        self.driver = driver.BMNetProvisioningDriver()
 
     def test_create_port_with_switch_enabled(self):
         """Test create port for with enabled case."""
