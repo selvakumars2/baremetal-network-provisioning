@@ -1,4 +1,4 @@
-# Copyright (c) 2015 OpenStack Foundation
+# Copyright (c) 2016 OpenStack Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,9 @@
 # limitations under the License.
 from baremetal_network_provisioning.common import constants
 from baremetal_network_provisioning.db import bm_nw_provision_db as db
+from baremetal_network_provisioning import managers
 from baremetal_network_provisioning.ml2 import network_provisioning_api as api
+
 
 import webob.exc as wexc
 
@@ -24,35 +26,21 @@ from neutron.i18n import _LE
 from neutron.i18n import _LI
 from neutron.plugins.ml2.common import exceptions as ml2_exc
 
-from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_utils import importutils
 
 LOG = logging.getLogger(__name__)
-hp_opts = [
-    cfg.IntOpt('snmp_retries',
-               default=5,
-               help=_("Number of retries to be done")),
-    cfg.IntOpt('snmp_timeout',
-               default=3,
-               help=_("Timeout in seconds to wait for SNMP request"
-                      "completion."))]
-cfg.CONF.register_opts(hp_opts, "default")
 
 
-class HPSNMPProvisioningDriver(api.NetworkProvisioningApi):
+class BMNetProvisioningDriver(api.NetworkProvisioningApi):
     """Back-end mechanism driver implementation for bare
 
     metal provisioning.
     """
 
     def __init__(self):
-        """initialize the snmp driver."""
-        self.conf = cfg.CONF
-        # TODO(selva) need to check how we can load dynamically
-        drvr = 'baremetal_network_provisioning.drivers.snmp_driver.SNMPDriver'
+        """initialize the protocol drivers."""
         self.context = neutron_context.get_admin_context()
-        self._load_drivers(drvr)
+        self.protocol_manager = managers.ProtocolManager()
 
     def create_port(self, port):
         """create_port ."""
@@ -76,11 +64,12 @@ class HPSNMPProvisioningDriver(api.NetworkProvisioningApi):
             if not phys_port:
                 self._raise_ml2_error(wexc.HTTPNotFound, 'create_port')
             switchport['ifindex'] = phys_port.ifindex
+        driver = self._protocol_driver(bnp_switch)
         credentials_dict = port.get('port')
         cred_dict = self._get_credentials_dict(bnp_switch, 'create_port')
         credentials_dict['credentials'] = cred_dict
         try:
-            self.protocol_driver.set_isolation(port)
+            driver.obj.set_isolation(port)
             port_id = port['port']['id']
             segmentation_id = port['port']['segmentation_id']
             mapping_dict = {'neutron_port_id': port_id,
@@ -142,19 +131,13 @@ class HPSNMPProvisioningDriver(api.NetworkProvisioningApi):
         credentials_dict = port_dict.get('port')
         credentials_dict['credentials'] = cred_dict
         try:
-            self.protocol_driver.delete_isolation(port_dict)
+            driver = self._protocol_driver(bnp_switch)
+            driver.obj.delete_isolation(port_dict)
             db.delete_bnp_neutron_port(self.context, port_id)
             db.delete_bnp_switch_port_mappings(self.context, port_id)
         except Exception as e:
             LOG.error(_LE("Error in deleting the port '%s' "), e)
             self._raise_ml2_error(wexc.HTTPNotFound, 'delete_port')
-
-    def _load_drivers(self, driver_str):
-        """Loads Facet drivers."""
-        if not driver_str:
-            raise SystemExit(_('A facet driver'
-                               'must be specified'))
-        self.protocol_driver = importutils.import_object(driver_str)
 
     def _raise_ml2_error(self, err_type, method_name):
         base.FAULT_MAP.update({ml2_exc.MechanismDriverError: err_type})
@@ -202,3 +185,16 @@ class HPSNMPProvisioningDriver(api.NetworkProvisioningApi):
                 LOG.error(_LE("Physical switch is not Enabled '%s' "),
                           bnp_switch.status)
                 self._raise_ml2_error(wexc.HTTPBadRequest, 'create_port')
+
+    def _protocol_driver(self, bnp_switch):
+        """Get the protocol driver instance based on protocol."""
+        protocol_type = bnp_switch.access_protocol
+        snmp_protocol = constants.PROTOCOL_SNMP
+        if constants.PROTOCOL_SNMP in protocol_type:
+            driver = self.protocol_manager.protocol_driver(snmp_protocol)
+        else:
+            try:
+                driver = self.protocol_manager.protocol_driver(protocol_type)
+            except Exception as e:
+                LOG.error(_LE("No suitable protocol driver loaded'%s' "), e)
+        return driver

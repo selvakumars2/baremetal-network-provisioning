@@ -33,7 +33,6 @@ class TestHPMechDriver(base.BaseTestCase):
     def setUp(self):
         super(TestHPMechDriver, self).setUp()
         self.driver = hp_mech.HPMechanismDriver()
-        self.np_driver = np_drv.HPNetworkProvisioningDriver()
         self.driver.initialize()
         self.driver._load_drivers()
 

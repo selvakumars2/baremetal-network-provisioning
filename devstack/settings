@@ -8,6 +8,7 @@ SNMP_RETRIES=5
 NET_PROVISIONING_DRIVER=baremetal_network_provisioning.drivers.hp.hp_snmp_provisioning_driver.HPSNMPProvisioningDriver
 HP_MECHANISM_DRIVER=baremetal_network_provisioning.ml2.mechanism_hp:HPMechanismDriver
 BNP_EXTENSION_DRIVER=baremetal_network_provisioning.ml2.hpironicextensiondriver:HPIronicExtensionDriver
+PROTOCOL_DRIVER=snmp
 #
 # Each service you enable has the following meaning:
 # bnp-plugin - Add this config flag to  enable bnp service plugin

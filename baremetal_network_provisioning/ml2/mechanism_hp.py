@@ -32,6 +32,11 @@ hp_opts = [
                '.hp_network_provisioning_driver.HPNetworkProvisioningDriver',
                help=_("Driver to provision networks on the switches in"
                       "the cloud fabric")),
+    cfg.StrOpt('protocol_drivers',
+               default='baremetal_network_provisioning.drivers'
+               '.snmp_driver.SNMPDriver',
+               help=_("Protocol Driver to provision networks on the switches"
+                      " in the cloud fabric")),
 ]
 cfg.CONF.register_opts(hp_opts, "ml2_hp")
 
